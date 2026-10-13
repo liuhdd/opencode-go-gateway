@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { resolveConfig, startServer, normalizePath, buildUpstreamTarget, fingerprintSession, listenHosts } from '../gateway.mjs';
+import { resolveConfig, startServer, normalizePath, buildUpstreamTarget, fingerprintSession, listenHosts, isOriginAllowed } from '../gateway.mjs';
 import { createMockServer } from './mock-upstream.mjs';
 
 let mock;
@@ -908,6 +908,63 @@ describe('复核 M2/M3/M4：安全边界', () => {
       const ok = await apiCall(base, '/v1/chat/completions', { headers: { origin: 'https://any.app' } });
       assert.equal(ok.status, 200);
     });
+  });
+
+  test('CORS 基线不因 --allow-origin 而丢失（回环 / null 仍放行）', async () => {
+    const safari = 'safari-web-extension://24d1f36b-a0c5-4b24-a493-04a339726689';
+    await withGateway(['--allow-origin', safari], async ({ base }) => {
+      for (const origin of ['http://localhost:3000', 'http://127.0.0.1:5173', 'null']) {
+        const res = await apiCall(base, '/v1/chat/completions', { headers: { origin } });
+        assert.equal(res.status, 200, `追加白名单后 ${origin} 仍应放行`);
+      }
+      const ext = await apiCall(base, '/v1/chat/completions', { headers: { origin: safari } });
+      assert.equal(ext.status, 200, '照 403 提示加上来的扩展来源必须放行');
+      assert.equal(ext.headers.get('access-control-allow-origin'), safari);
+      const otherExt = await apiCall(base, '/v1/chat/completions', {
+        headers: { origin: 'safari-web-extension://ffffffff-0000-0000-0000-000000000000' },
+      });
+      assert.equal(otherExt.status, 403, '没写通配时别的扩展不放行');
+    });
+  });
+
+  test('--allow-origin 支持通配（Safari 扩展重装后 UUID 变了也不用改配置）', async () => {
+    const safari = 'safari-web-extension://24d1f36b-a0c5-4b24-a493-04a339726689';
+    await withGateway(['--allow-origin', 'safari-web-extension://*,chrome-extension://abcd'], async ({ base }) => {
+      const pre = await fetch(`${base}/v1/chat/completions`, {
+        method: 'OPTIONS',
+        headers: {
+          origin: safari,
+          'access-control-request-method': 'POST',
+          'access-control-request-headers': 'authorization,content-type',
+        },
+      });
+      assert.equal(pre.status, 204, '扩展的预检必须本地应答，不能转到上游');
+      assert.equal(pre.headers.get('access-control-allow-origin'), safari);
+      assert.match(pre.headers.get('access-control-allow-headers') ?? '', /authorization/);
+
+      const wild = await apiCall(base, '/v1/chat/completions', { headers: { origin: 'safari-web-extension://any-other-uuid' } });
+      assert.equal(wild.status, 200);
+      const exact = await apiCall(base, '/v1/chat/completions', { headers: { origin: 'chrome-extension://abcd' } });
+      assert.equal(exact.status, 200, '不带 * 的条目按字面量匹配');
+      const notExact = await apiCall(base, '/v1/chat/completions', { headers: { origin: 'chrome-extension://zzzz' } });
+      assert.equal(notExact.status, 403, '精确条目不能被前缀放宽');
+      const evil = await apiCall(base, '/v1/chat/completions', { headers: { origin: 'https://evil.example' } });
+      assert.equal(evil.status, 403);
+    });
+  });
+
+  test('isOriginAllowed: 通配只作用于条目内部的 *，不放大 scheme', () => {
+    const cfg = { allowOrigin: ['safari-web-extension://*'] };
+    assert.equal(isOriginAllowed('safari-web-extension://abc', cfg), true);
+    assert.equal(isOriginAllowed('https://abc', cfg), false);
+    assert.equal(isOriginAllowed('safari-web-extension-other://abc', cfg), false);
+    // 未配置白名单时：基线放行，其它一律不放过
+    assert.equal(isOriginAllowed('http://localhost:3000'), true);
+    assert.equal(isOriginAllowed('http://127.0.0.1:5173'), true);
+    assert.equal(isOriginAllowed('null'), true);
+    assert.equal(isOriginAllowed('https://evil.example'), false);
+    assert.equal(isOriginAllowed(''), false);
+    assert.equal(isOriginAllowed('not a url'), false);
   });
 });
 

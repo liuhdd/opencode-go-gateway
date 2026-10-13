@@ -105,10 +105,10 @@ node gateway.mjs --help
 | `--api-key` | 空 | 留空 = 透传客户端的 key（推荐）；填了 = 用这个 key 覆盖 |
 | `--model-map` | 空 | 模型名映射，例如 `--model-map "gpt-4o=deepseek-v4-flash"` |
 | `--local-token` | 空 | 要求请求带 `x-gateway-token`，防本机其它程序乱用 |
-| `--allow-origin` | 空 | CORS 白名单，逗号分隔；`*` 全放行。默认只放行回环来源与 `null`(file://) |
+| `--allow-origin` | 空 | **追加**到 CORS 白名单，逗号分隔，支持 `*` 通配（如 `safari-web-extension://*`）。基线（回环来源 + `null`(file://)）始终放行 |
 | `--use-user-hint` | 关 | 把请求体里的 `user` 也当会话提示。默认关：很多客户端按请求打点，开了会让缓存全废 |
 | `--request-timeout-ms` | `300000` | Node 层请求超时，防半开连接占坑 |
-| `--config` | 空 | JSON 配置文件，见 `config.example.json` |
+| `--config` | 空 | JSON 配置文件，见 `config.example.json`。`./start.sh` 与 LaunchAgent 会自动加载仓库根目录的 `config.json`（存在时） |
 
 环境变量同名：`OCG_PORT`、`OCG_UPSTREAM`、`OCG_MODE`、`OCG_LOG`、`OCG_API_KEY` …
 
@@ -128,8 +128,10 @@ node gateway.mjs --help
 临时后台运行：
 
 ```bash
-nohup node gateway.mjs --log warn > /tmp/opencode-go-gateway.log 2>&1 &
+nohup node gateway.mjs --config config.json --log warn > /tmp/opencode-go-gateway.log 2>&1 &
 ```
+
+> 这条绕过了 `start.sh`，`config.json` 不会自动生效，所以要显式带上 `--config`。
 
 ## 故障排查
 
@@ -173,6 +175,27 @@ nohup node gateway.mjs --log warn > /tmp/opencode-go-gateway.log 2>&1 &
 | 客户端报「模型不存在」 | 用了非 OpenCode 的模型名。改用官方 ID，或加 `--model-map` 映射 |
 | 拉不到模型列表 | 配置 `http://127.0.0.1:8787/v1`（部分软件要求 base 带 `/v1`），网关支持 `/v1/models` |
 | 流式翻译卡住 | 网关逐块透传、不缓冲；多半是客户端自身 SSE 解析问题，可用 `--mode passthrough` 对比 |
+| `403 来源 ... 不在 CORS 白名单内` | 浏览器扩展（Safari/Chrome）的 Origin 是 `safari-web-extension://<UUID>` / `chrome-extension://<ID>`，不在基线的回环来源里。见下一节 |
+
+### 浏览器扩展报 `403 gateway_origin_denied`
+
+扩展发起的请求（尤其带 `Authorization` 时）会先发 CORS 预检，Origin 形如
+`safari-web-extension://24d1f36b-...`。这类来源必须显式放行：
+
+```bash
+./start.sh --allow-origin safari-web-extension://24d1f36b-a0c5-4b24-a493-04a339726689
+```
+
+写进 `config.json` 更省事（`./start.sh` 会自动加载）：
+
+```json
+{ "allowOrigin": "safari-web-extension://24d1f36b-a0c5-4b24-a493-04a339726689" }
+```
+
+Safari 扩展重装/更新后 UUID 会变，届时要么按 403 提示填新值，要么用通配一次搞定：
+`"allowOrigin": "safari-web-extension://*"`（`chrome-extension://*` 同理）。
+
+`--allow-origin` 只做**追加**，不会顶掉回环来源与 `null`(file://) 的基线放行。
 
 网关日志形如：
 
@@ -191,7 +214,8 @@ nohup node gateway.mjs --log warn > /tmp/opencode-go-gateway.log 2>&1 &
   进程内存会持有 key，此时不要改 `--host`。
 
 网关自身只接受回环连接（管理端点 `/_gateway/*` 同样受限）、校验 Host 挡 DNS rebinding、CORS 默认只放行
-回环来源、日志对 `authorization` / `x-api-key` / `cookie` / `x-gateway-token` 打码，均有回归测试覆盖。
+回环来源与 `null`(file://)、`--allow-origin` 只在此基础上追加且写成通配也不会连累其它来源、
+日志对 `authorization` / `x-api-key` / `cookie` / `x-gateway-token` 打码，均有回归测试覆盖。
 
 ## 项目结构
 

@@ -46,6 +46,14 @@ if [ -z "$NODE_BIN" ]; then
   exit 1
 fi
 
+# 本机有 config.json 就一并交给网关；--port/--mode 等命令行参数优先级更高，
+# 所以放在这里不会顶掉上面的显式设置。
+CONFIG_XML=""
+if [ -f "$ROOT/config.json" ]; then
+  CONFIG_XML="    <string>--config</string>
+    <string>$ROOT/config.json</string>"
+fi
+
 PLIST_CONTENT="$(cat <<PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -61,6 +69,7 @@ PLIST_CONTENT="$(cat <<PLIST_EOF
     <string>$PORT</string>
     <string>--mode</string>
     <string>$MODE</string>
+$CONFIG_XML
   </array>
   <key>WorkingDirectory</key>
   <string>$ROOT</string>

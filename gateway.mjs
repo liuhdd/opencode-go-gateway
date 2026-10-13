@@ -51,7 +51,8 @@ const DEFAULTS = {
   modelMap: {},
   /** 允许携带 Origin 的请求通过（默认仅在配置了 apiKey 时拦截浏览器来源） */
   allowBrowser: false,
-  /** CORS 白名单：逗号分隔的来源，或 '*'。留空 = 只放行回环来源与 null */
+  /** 追加到 CORS 基线上的白名单：逗号分隔，支持 * 通配。
+   *  基线（回环来源 + null(file://)）始终放行，本项只做追加 */
   allowOrigin: '',
   /** 是否把请求体里的 user 字段也当成会话提示（默认关：很多客户端按请求打点，会毁掉缓存） */
   useUserHint: false,
@@ -625,7 +626,7 @@ export function createGateway(config) {
         return sendJson(res, 403, {
           error: {
             type: 'gateway_origin_denied',
-            message: `来源 ${origin} 不在 CORS 白名单内。确需放行请加 --allow-origin ${origin}`,
+            message: `来源 ${origin} 不在 CORS 白名单内。确需放行请加 --allow-origin ${origin}；也支持通配，如 safari-web-extension://*`,
           },
         });
       }
@@ -935,26 +936,48 @@ export function isAllowedHost(hostHeader, cfg = {}) {
 const LOOPBACK_ORIGIN_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
 
 /**
- * CORS 白名单。默认放行：
+ * 把一条白名单编译成匹配函数。只有条目内部的 `*` 是通配符，其余字符按字面量匹配。
+ * 例：`safari-web-extension://*` 匹配该 scheme 下的任意扩展，`*` 匹配一切。
+ */
+function originMatcher(pattern) {
+  const p = String(pattern).trim();
+  if (!p) return null;
+  if (!p.includes('*')) return (origin) => origin === p;
+  const re = new RegExp(`^${p.split('*').map(escapeRegExp).join('.*')}$`);
+  return (origin) => re.test(origin);
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * CORS 白名单。基线**永远**放行：
  *   - 回环来源（WebView / 本地 dev server）
  *   - 字面量 "null"（file:// 打开的 WebView，Origin 头就是 null）
+ * `--allow-origin` 是在这条基线上**追加**，不是替换 —— 否则用户照 403 提示
+ * 加上一个扩展来源，会顺手打断原本能用的 WebView / file:// 客户端。
  * 其余来源一律不放行，否则任意网站都能把本机网关当免 CORS 的中转。
- * 需要放行别的来源：--allow-origin https://my.app（可逗号分隔，或用 * 全放行）
+ *
+ * 追加写法：--allow-origin safari-web-extension://<UUID>（可逗号分隔）
+ *   - 支持 `*` 通配：`safari-web-extension://*`（Safari 扩展重装后 UUID 会变，
+ *     写通配可免于反复改配置）、`chrome-extension://*`、`*`（全放行，慎用）
  */
 export function isOriginAllowed(origin, cfg = {}) {
   if (!origin) return false;
-  const allow = cfg.allowOrigin;
-  if (allow === '*') return true;
-  if (Array.isArray(allow) && allow.length > 0) {
-    return allow.includes(origin) || allow.includes('*');
-  }
+  // ---- 基线：file:// 与回环来源 ----
   if (origin === 'null') return true;
   try {
-    const u = new URL(origin);
-    return LOOPBACK_ORIGIN_HOSTS.has(u.hostname.toLowerCase());
+    if (LOOPBACK_ORIGIN_HOSTS.has(new URL(origin).hostname.toLowerCase())) return true;
   } catch {
-    return false;
+    // 不是合法 URL（扩展 scheme 的畸形值等），交给白名单再判一次
   }
+
+  // ---- 追加白名单 ----
+  const allow = cfg.allowOrigin;
+  if (allow === '*') return true;
+  const list = Array.isArray(allow) ? allow : String(allow ?? '').split(',');
+  return list.some((entry) => originMatcher(entry)?.(origin) ?? false);
 }
 
 function sendJson(res, status, payload) {
@@ -1083,6 +1106,8 @@ opencode-go-gateway ${VERSION} — 给不支持自定义请求头的客户端补
   --model-map <a=b,c=d>   模型名映射，例如 --model-map "gpt-4o=deepseek-v4-flash"
   --local-token <t>       要求请求携带 x-gateway-token: <t>
   --allow-browser         允许带 Origin 的浏览器请求通过
+  --allow-origin <列表>   追加 CORS 白名单（逗号分隔）。默认基线是回环来源与 null(file://)，
+                          本项只做追加；支持 * 通配，如 safari-web-extension://*
   --config <file>         JSON 配置文件
   --print-config          打印最终配置后退出
   --help                  显示帮助

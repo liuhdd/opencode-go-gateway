@@ -1,5 +1,5 @@
 {
-  "//": "复制成 config.json 后按需修改，然后运行：node gateway.mjs --config config.json",
+  "//": "复制成 config.json 后按需修改。之后 ./start.sh 会自动带上它，也可显式指定 --config config.json",
   "//备注": "以 // _ # 开头的键会被当作注释忽略。命令行参数优先级高于本文件。",
 
   "host": "127.0.0.1",
@@ -22,6 +22,10 @@
   "apiKey": "",
   "allowBrowser": false,
   "localToken": "",
+
+  "//allowOrigin": "追加 CORS 白名单（逗号分隔，支持 * 通配）。基线是回环来源与 null(file://)，始终放行。",
+  "//allowOrigin示例": "浏览器扩展必须在这里放行，例如 safari-web-extension://<UUID>；UUID 会变就用 safari-web-extension://*",
+  "allowOrigin": "",
 
   "//modelMap": "客户端模型名 -> opencode 真实模型 id，例如 \"gpt-4o\": \"deepseek-v4-flash\"",
   "modelMap": {}
