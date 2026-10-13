@@ -1,0 +1,19 @@
+{
+  "name": "opencode-adapter",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地转发网关：给不支持自定义请求头的客户端自动补上 OpenCode Go 要求的 x-opencode-session",
+  "bin": {
+    "opencode-adapter": "./gateway.mjs"
+  },
+  "scripts": {
+    "start": "node gateway.mjs",
+    "test": "node --test test/gateway.test.mjs",
+    "smoke": "node scripts/smoke-live.mjs",
+    "status": "curl -s http://127.0.0.1:8787/_gateway/status"
+  },
+  "engines": {
+    "node": ">=18.17"
+  }
+}

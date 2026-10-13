@@ -1,0 +1,28 @@
+{
+  "//": "复制成 config.json 后按需修改，然后运行：node gateway.mjs --config config.json",
+  "//备注": "以 // _ # 开头的键会被当作注释忽略。命令行参数优先级高于本文件。",
+
+  "host": "127.0.0.1",
+  "port": 8787,
+  "upstream": "https://opencode.ai/inference/go",
+
+  "//mode": "auto | model | content | fixed | passthrough，详见 README 第四节",
+  "mode": "auto",
+  "session": "",
+  "sessionPrefix": "ocg",
+
+  "logLevel": "info",
+  "timeoutMs": 120000,
+  "maxBodyBytes": 33554432,
+
+  "userAgent": "opencode-go-gateway/1.0",
+  "keepUserAgent": false,
+
+  "//apiKey": "留空 = 透传翻译软件自己填的 key（推荐）",
+  "apiKey": "",
+  "allowBrowser": false,
+  "localToken": "",
+
+  "//modelMap": "客户端模型名 -> opencode 真实模型 id，例如 \"gpt-4o\": \"deepseek-v4-flash\"",
+  "modelMap": {}
+}
