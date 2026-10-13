@@ -55,7 +55,7 @@ function isMissingSession(r) {
 const results = [];
 let failed = false;
 
-console.log(`opencode-adapter v${VERSION} 端到端冒烟`);
+console.log(`opencode-go-gateway v${VERSION} 端到端冒烟`);
 console.log(`上游: ${UPSTREAM}`);
 console.log(`模型: ${MODEL}   key: ${usingRealKey ? '真实 key' : '假 key(sk-invalid-test-key)'}`);
 console.log('');

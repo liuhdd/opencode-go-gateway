@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 把 opencode-adapter 装成 macOS 登录自启服务（LaunchAgent）。
+# 把 opencode-go-gateway 装成 macOS 登录自启服务（LaunchAgent）。
 #
 #   ./scripts/install-service.sh --dry-run     # 只打印 plist，不装
 #   ./scripts/install-service.sh               # 安装并立即启动
@@ -12,9 +12,9 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-LABEL="com.opencode-adapter.gateway"
+LABEL="com.opencode-go-gateway"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
-LOGDIR="$HOME/Library/Logs/opencode-adapter"
+LOGDIR="$HOME/Library/Logs/opencode-go-gateway"
 
 PORT=8787
 MODE=auto

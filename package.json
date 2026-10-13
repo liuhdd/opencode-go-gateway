@@ -1,11 +1,11 @@
 {
-  "name": "opencode-adapter",
+  "name": "opencode-go-gateway",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "本地转发网关：给不支持自定义请求头的客户端自动补上 OpenCode Go 要求的 x-opencode-session",
   "bin": {
-    "opencode-adapter": "./gateway.mjs"
+    "opencode-go-gateway": "./gateway.mjs"
   },
   "scripts": {
     "start": "node gateway.mjs",

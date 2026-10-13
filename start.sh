@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 前台启动 opencode-adapter。Ctrl-C 退出。
+# 前台启动 opencode-go-gateway。Ctrl-C 退出。
 #   ./start.sh                 # 127.0.0.1:8787
 #   ./start.sh --port 9000
 set -euo pipefail

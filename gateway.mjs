@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * opencode-go 本地转发网关 (opencode-adapter)
+ * opencode-go 本地转发网关 (opencode-go-gateway)
  *
  * 作用：给不支持自定义请求头的客户端（翻译软件、旧版 IDE 插件等）
  * 自动补上 OpenCode Go 要求的 `x-opencode-session` 头，并把请求原样转发到
@@ -1061,7 +1061,7 @@ export async function startServer(cfg) {
 }
 
 const USAGE = `
-opencode-adapter ${VERSION} — 给不支持自定义请求头的客户端补 x-opencode-session
+opencode-go-gateway ${VERSION} — 给不支持自定义请求头的客户端补 x-opencode-session
 
 用法:
   node gateway.mjs [选项]
@@ -1126,7 +1126,7 @@ async function main() {
     process.exit(1);
   });
 
-  log('info', `opencode-adapter v${VERSION} 已启动: http://${cfg.host}:${cfg.port}`);
+  log('info', `opencode-go-gateway v${VERSION} 已启动: http://${cfg.host}:${cfg.port}`);
   log('info', `上游: ${cfg.upstream}  会话模式: ${cfg.mode}`);
   log('info', `把翻译软件的 API 地址填成: http://${cfg.host}:${cfg.port}/v1`);
   if (cfg.host !== '127.0.0.1' && cfg.host !== 'localhost' && cfg.host !== '::1') {

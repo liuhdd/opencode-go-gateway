@@ -1,5 +1,5 @@
 /**
- * opencode-adapter 自动化测试
+ * opencode-go-gateway 自动化测试
  *   node --test test/
  */
 import test, { before, after, describe } from 'node:test';
@@ -737,12 +737,12 @@ describe('配置解析', () => {
 describe('复核 B1/B2/B3：健壮性', () => {
   test('B1 通过软链接调用也能正常执行（npm bin / npx 形态）', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocg-link-'));
-    const link = path.join(dir, 'opencode-adapter');
+    const link = path.join(dir, 'opencode-go-gateway');
     const real = path.resolve('gateway.mjs');
     fs.symlinkSync(real, link);
     try {
       const out = execFileSync(process.execPath, [link, '--help'], { encoding: 'utf8', timeout: 20000 });
-      assert.match(out, /opencode-adapter/, '软链接调用必须真的有输出');
+      assert.match(out, /opencode-go-gateway/, '软链接调用必须真的有输出');
       assert.match(out, /用法/, '--help 内容必须正常打印');
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });

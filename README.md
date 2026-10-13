@@ -1,4 +1,4 @@
-# opencode-adapter
+# opencode-go-gateway
 
 > 本地转发网关：给**不支持自定义请求头**的客户端（翻译软件、旧版 IDE 插件、各类 GUI）自动补上
 > OpenCode Go 要求的 `x-opencode-session` 头。零依赖，只用 Node 内置模块，默认只监听 `127.0.0.1`。
@@ -25,7 +25,7 @@ OpenCode 官方文档 [Where can I use it?](https://opencode.ai/docs/go/) 要求
 需要 Node.js ≥ 18.17。
 
 ```bash
-cd ~/opencode-adapter
+cd opencode-go-gateway    # 换成你的实际目录
 
 npm test      # 可选：71 个用例，确认环境正常
 ./start.sh    # 启动网关 → http://127.0.0.1:8787（Ctrl-C 退出）
@@ -128,7 +128,7 @@ node gateway.mjs --help
 临时后台运行：
 
 ```bash
-nohup node gateway.mjs --log warn > /tmp/opencode-adapter.log 2>&1 &
+nohup node gateway.mjs --log warn > /tmp/opencode-go-gateway.log 2>&1 &
 ```
 
 ## 故障排查
